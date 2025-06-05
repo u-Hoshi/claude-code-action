@@ -21,23 +21,35 @@ import { parseGitHubContext } from "../github/context";
 
 async function run() {
   try {
+    console.log(`🔧 [PREPARE] Starting Claude action preparation`);
+    console.log(`🔧 [PREPARE] Event: ${process.env.GITHUB_EVENT_NAME}`);
+    console.log(`🔧 [PREPARE] Repository: ${process.env.GITHUB_REPOSITORY}`);
+    console.log(`🔧 [PREPARE] Actor: ${process.env.GITHUB_ACTOR}`);
+    
     // Step 1: Setup GitHub token
+    console.log(`🔧 [PREPARE] Setting up GitHub token...`);
     const githubToken = await setupGitHubToken();
+    console.log(`🔧 [PREPARE] GitHub token obtained: ${githubToken.substring(0, 8)}...`);
     const octokit = createOctokit(githubToken);
 
     // Step 2: Parse GitHub context (once for all operations)
+    console.log(`🔧 [PREPARE] Parsing GitHub context...`);
     const context = parseGitHubContext();
+    console.log(`🔧 [PREPARE] Context parsed - Event: ${context.eventName}, Entity: ${context.entityNumber}`);
 
     // Step 3: Check write permissions
+    console.log(`🔧 [PREPARE] Checking write permissions for ${context.repository.full_name}...`);
     const hasWritePermissions = await checkWritePermissions(
       octokit.rest,
       context,
     );
     if (!hasWritePermissions) {
+      console.error(`❌ [PREPARE] Actor does not have write permissions to ${context.repository.full_name}`);
       throw new Error(
         "Actor does not have write permissions to the repository",
       );
     }
+    console.log(`✅ [PREPARE] Write permissions confirmed`);
 
     // Step 4: Check trigger conditions
     const containsTrigger = await checkTriggerAction(context);

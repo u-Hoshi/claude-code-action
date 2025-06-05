@@ -6,6 +6,11 @@ export async function prepareMcpConfig(
   repo: string,
   branch: string,
 ): Promise<string> {
+  console.log(`🔧 [MCP] Preparing MCP config for ${owner}/${repo}:${branch}`);
+  console.log(`🔧 [MCP] GitHub token available: ${githubToken ? githubToken.substring(0, 8) + '...' : 'MISSING'}`);
+  console.log(`🔧 [MCP] Action path: ${process.env.GITHUB_ACTION_PATH}`);
+  console.log(`🔧 [MCP] Workspace: ${process.env.GITHUB_WORKSPACE || process.cwd()}`);
+  
   try {
     const mcpConfig = {
       mcpServers: {
