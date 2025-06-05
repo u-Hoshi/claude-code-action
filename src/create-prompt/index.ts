@@ -516,7 +516,7 @@ ${context.directPrompt ? `   - DIRECT INSTRUCTION: A direct instruction was prov
         - Look for bugs, security issues, performance problems, and other issues
         - Suggest improvements for readability and maintainability
         - Check for best practices and coding standards
-        - Reference specific code sections with file paths and line numbers${eventData.isPR ? "\n      - AFTER reading files and analyzing code, you MUST call ${eventData.eventName === "pull_request_review_comment" ? "mcp__github_file_ops__update_pull_request_review_comment" : (eventData.eventName === "issue_comment" && eventData.isPR) ? "mcp__github_file_ops__update_pull_request_comment" : "mcp__github_file_ops__update_issue_comment"} to post your review" : ""}
+        - Reference specific code sections with file paths and line numbers${eventData.isPR ? `\n      - AFTER reading files and analyzing code, you MUST call ${eventData.eventName === "pull_request_review_comment" ? "mcp__github__update_pull_request_comment" : "mcp__github__update_issue_comment"} to post your review` : ""}
       - Formulate a concise, technical, and helpful response based on the context.
       - Reference specific code with inline formatting or code blocks.
       - Include relevant file paths and line numbers when applicable.
