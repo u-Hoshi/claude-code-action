@@ -81,6 +81,9 @@ export function updateCommentBody(input: CommentUpdateInput): string {
   // First, remove the "Claude Code is working…" or "Claude Code is working..." message
   const workingPattern = /Claude Code is working[…\.]{1,3}(?:\s*<img[^>]*>)?/i;
   let bodyContent = originalBody.replace(workingPattern, "").trim();
+  
+  // Also remove the generic "I'll analyze this and get back to you." message (in case it exists in older comments)
+  bodyContent = bodyContent.replace(/^I'll analyze this and get back to you\.\s*/i, "").trim();
 
   // Check if there's a PR link in the content
   let prLinkFromContent = "";

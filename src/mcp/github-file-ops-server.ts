@@ -523,7 +523,7 @@ server.tool(
 
 // Update issue comment tool - 新規追加！
 server.tool(
-  "update_issue_comment",
+  "github__update_issue_comment",
   "Update a GitHub issue comment",
   {
     owner: z.string().describe("Repository owner"),
@@ -650,6 +650,134 @@ server.tool(
               base: result.base.ref,
               created_at: result.created_at
             }, null, 2),
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error: ${errorMessage}`,
+          },
+        ],
+        error: errorMessage,
+        isError: true,
+      };
+    }
+  },
+);
+
+// Update pull request comment tool - 新規追加！
+server.tool(
+  "github__update_pull_request_comment",
+  "Update a GitHub pull request comment (for regular PR comments, not review comments)",
+  {
+    owner: z.string().describe("Repository owner"),
+    repo: z.string().describe("Repository name"),
+    commentId: z.string().describe("Comment ID to update"),
+    body: z.string().describe("New comment body"),
+  },
+  async ({ owner, repo, commentId, body }) => {
+    try {
+      const githubToken = process.env.GITHUB_TOKEN;
+      if (!githubToken) {
+        throw new Error("GITHUB_TOKEN environment variable is required");
+      }
+
+      // PR comments use the same API as issue comments
+      const updateUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/issues/comments/${commentId}`;
+      const response = await fetch(updateUrl, {
+        method: "PATCH",
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${githubToken}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ body }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to update PR comment: ${response.status} - ${errorText}`,
+        );
+      }
+
+      const result = await response.json();
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: `PR comment ${commentId} updated successfully`,
+          },
+        ],
+      };
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Error: ${errorMessage}`,
+          },
+        ],
+        error: errorMessage,
+        isError: true,
+      };
+    }
+  },
+);
+
+// Update pull request review comment tool - 新規追加！
+server.tool(
+  "update_pull_request_review_comment",
+  "Update a GitHub pull request review comment (for inline code review comments)",
+  {
+    owner: z.string().describe("Repository owner"),
+    repo: z.string().describe("Repository name"),
+    commentId: z.string().describe("Review comment ID to update"),
+    body: z.string().describe("New comment body"),
+  },
+  async ({ owner, repo, commentId, body }) => {
+    try {
+      const githubToken = process.env.GITHUB_TOKEN;
+      if (!githubToken) {
+        throw new Error("GITHUB_TOKEN environment variable is required");
+      }
+
+      // Review comments use a different API endpoint
+      const updateUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/pulls/comments/${commentId}`;
+      const response = await fetch(updateUrl, {
+        method: "PATCH",
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${githubToken}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ body }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to update PR review comment: ${response.status} - ${errorText}`,
+        );
+      }
+
+      const result = await response.json();
+      
+      return {
+        content: [
+          {
+            type: "text",
+            text: `PR review comment ${commentId} updated successfully`,
           },
         ],
       };
