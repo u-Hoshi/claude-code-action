@@ -27,7 +27,7 @@ export function createCommentBody(
 ): string {
   return `Claude Code is working… ${SPINNER_HTML}
 
-I'll analyze this and get back to you.
+ℹ️ℹ️ℹ️ I'll analyze this and get back to you.
 
 ${jobRunLink}${branchLink}`;
 }
