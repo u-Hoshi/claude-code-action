@@ -53,7 +53,9 @@ export async function updateTrackingComment(
         comment_id: commentId,
         body: updatedBody,
       });
+      console.log("🍜updatedBody",updatedBody)
       console.log(`✅ Updated issue comment ${commentId} with branch link`);
+      cosnole.log(`Branch link: ${branchLink}`);
     }
   } catch (error) {
     console.error("Error updating comment with branch link:", error);
