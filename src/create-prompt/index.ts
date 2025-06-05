@@ -38,24 +38,34 @@ export function buildAllowedToolsString(
   eventData: EventData,
   customAllowedTools?: string,
 ): string {
+  console.log(`🔧 [PROMPT] Building allowed tools for event: ${eventData.eventName}`);
+  console.log(`🔧 [PROMPT] Event data:`, JSON.stringify(eventData, null, 2));
+  
   let baseTools = [...BASE_ALLOWED_TOOLS];
+  console.log(`🔧 [PROMPT] Base tools:`, baseTools);
 
   // Add the appropriate comment tool based on event type
   if (eventData.eventName === "pull_request_review_comment") {
     // For inline PR review comments, use review comment tool
-    baseTools.push("mcp__github_file_ops__update_pull_request_review_comment");
-  } else if (eventData.eventName === "issue_comment" && eventData.isPR) {
-    // For PR issue comments (general PR comments), use PR comment tool
-    baseTools.push("mcp__github_file_ops__update_pull_request_comment");
+    const reviewTool = "mcp__github_file_ops__update_pull_request_review_comment";
+    baseTools.push(reviewTool);
+    console.log(`🔧 [PROMPT] Added PR review comment tool: ${reviewTool}`);
   } else {
-    // For all other events (issue comments on issues, issue creation, etc.), use issue comment tool
-    baseTools.push("mcp__github_file_ops__update_issue_comment");
+    // For all other events (issue comments, PR comments), use issue comment tool
+    const issueTool = "mcp__github_file_ops__github__update_issue_comment";
+    baseTools.push(issueTool);
+    console.log(`🔧 [PROMPT] Added issue comment tool: ${issueTool} for event: ${eventData.eventName}`);
   }
+
+  console.log(`🔧 [PROMPT] Tools after adding comment tool:`, baseTools);
 
   let allAllowedTools = baseTools.join(",");
   if (customAllowedTools) {
+    console.log(`🔧 [PROMPT] Adding custom allowed tools: ${customAllowedTools}`);
     allAllowedTools = `${allAllowedTools},${customAllowedTools}`;
   }
+  
+  console.log(`🔧 [PROMPT] Final allowed tools string: ${allAllowedTools}`);
   return allAllowedTools;
 }
 
@@ -358,6 +368,10 @@ export function generatePrompt(
   const { eventData } = context;
 
   const { eventType, triggerContext } = getEventTypeAndContext(context);
+  console.log(`🔧 [PROMPT] Event type: ${eventType}, trigger context: ${triggerContext}`);
+  console.log(`🔧 [PROMPT] Repository: ${context.repository}`);
+  console.log(`🔧 [PROMPT] Claude comment ID: ${context.claudeCommentId}`);
+  console.log(`🔧 [PROMPT] Event data: ${JSON.stringify(eventData, null, 2)}`);
 
   const formattedContext = formatContext(contextData, eventData.isPR);
   const formattedComments = formatComments(comments, imageUrlMap);
@@ -434,44 +448,63 @@ ${stripHtmlComments(context.directPrompt)}
     : ""
 }
 ${
-  eventData.eventName === "pull_request_review_comment"
-    ? `<comment_tool_info>
+  (() => {
+    const owner = context.repository.split("/")[0];
+    const repo = context.repository.split("/")[1];
+    const commentId = ('commentId' in eventData ? eventData.commentId : undefined) || context.claudeCommentId;
+    
+    console.log(`🔧 [PROMPT] Generating comment tool info for event: ${eventData.eventName}`);
+    console.log(`🔧 [PROMPT] Repository owner: ${owner}`);
+    console.log(`🔧 [PROMPT] Repository name: ${repo}`);
+    console.log(`🔧 [PROMPT] Comment ID: ${commentId}`);
+    console.log(`🔧 [PROMPT] Claude comment ID: ${context.claudeCommentId}`);
+    console.log(`🔧 [PROMPT] Event comment ID: ${'commentId' in eventData ? eventData.commentId || 'N/A' : 'N/A'}`);
+    console.log(`🔧 [PROMPT] Is PR: ${eventData.isPR}`);
+    
+    if (eventData.eventName === "pull_request_review_comment") {
+      console.log(`🔧 [PROMPT] Using PR review comment tool`);
+      return `<comment_tool_info>
 IMPORTANT: For this inline PR review comment, you have been provided with ONLY the mcp__github_file_ops__update_pull_request_review_comment tool to update this specific review comment.
 
 Tool usage example for mcp__github_file_ops__update_pull_request_review_comment:
 {
-  "owner": "${context.repository.split("/")[0]}",
-  "repo": "${context.repository.split("/")[1]}",
-  "commentId": "${eventData.commentId || context.claudeCommentId}",
+  "owner": "${owner}",
+  "repo": "${repo}",
+  "commentId": "${commentId}",
   "body": "Your comment text here"
 }
 All four parameters (owner, repo, commentId, body) are required.
-</comment_tool_info>`
-    : (eventData.eventName === "issue_comment" && eventData.isPR)
-    ? `<comment_tool_info>
-IMPORTANT: For this PR comment, you have been provided with ONLY the mcp__github_file_ops__update_pull_request_comment tool to update comments.
+</comment_tool_info>`;
+    } else if (eventData.eventName === "issue_comment" && eventData.isPR) {
+      console.log(`🔧 [PROMPT] Using PR comment tool for issue_comment on PR`);
+      return `<comment_tool_info>
+IMPORTANT: For this PR comment, you have been provided with ONLY the mcp__github_file_ops__github__update_pull_request_comment tool to update comments.
 
-Tool usage example for mcp__github_file_ops__update_pull_request_comment:
+Tool usage example for mcp__github_file_ops__github__update_pull_request_comment:
 {
-  "owner": "${context.repository.split("/")[0]}",
-  "repo": "${context.repository.split("/")[1]}",
-  "commentId": "${context.claudeCommentId}",
+  "owner": "${owner}",
+  "repo": "${repo}",
+  "commentId": "${commentId}",
   "body": "Your comment text here"
 }
 All four parameters (owner, repo, commentId, body) are required.
-</comment_tool_info>`
-    : `<comment_tool_info>
-IMPORTANT: For this event type, you have been provided with ONLY the mcp__github_file_ops__update_issue_comment tool to update comments.
+</comment_tool_info>`;
+    } else {
+      console.log(`🔧 [PROMPT] Using issue comment tool for event: ${eventData.eventName}`);
+      return `<comment_tool_info>
+IMPORTANT: For this event type, you have been provided with ONLY the mcp__github_file_ops__github__update_issue_comment tool to update comments.
 
-Tool usage example for mcp__github_file_ops__update_issue_comment:
+Tool usage example for mcp__github_file_ops__github__update_issue_comment:
 {
-  "owner": "${context.repository.split("/")[0]}",
-  "repo": "${context.repository.split("/")[1]}",
-  "commentId": "${context.claudeCommentId}",
+  "owner": "${owner}",
+  "repo": "${repo}",
+  "commentId": "${commentId}",
   "body": "Your comment text here"
 }
 All four parameters (owner, repo, commentId, body) are required.
-</comment_tool_info>`
+</comment_tool_info>`;
+    }
+  })()
 }
 
 Your task is to analyze the context, understand the request, and provide helpful responses and/or implement code changes as needed.
@@ -574,8 +607,18 @@ ${context.directPrompt ? `   - DIRECT INSTRUCTION: A direct instruction was prov
    ${eventData.claudeBranch ? `- If you created anything in your branch, your comment must include the PR URL with prefilled title and body mentioned above.` : ""}
 
 Important Notes:
-- All communication must happen through GitHub PR comments.
-- Never create new comments. Only update the existing comment using ${eventData.eventName === "pull_request_review_comment" ? "mcp__github__update_pull_request_comment" : "mcp__github__update_issue_comment"} with comment_id: ${context.claudeCommentId}.
+- All communication must happen through GitHub comments.
+- Never create new comments. Only update the existing comment using ${
+  (() => {
+    const toolName = eventData.eventName === "pull_request_review_comment" 
+      ? "mcp__github_file_ops__update_pull_request_review_comment"
+      : (eventData.eventName === "issue_comment" && eventData.isPR)
+      ? "mcp__github_file_ops__github__update_pull_request_comment"
+      : "mcp__github_file_ops__github__update_issue_comment";
+    console.log(`🔧 [PROMPT] Final tool instruction - using tool: ${toolName} for event: ${eventData.eventName}, isPR: ${eventData.isPR}`);
+    return toolName;
+  })()
+} with comment_id: ${context.claudeCommentId}.
 - This includes ALL responses: code reviews, answers to questions, progress updates, and final results.${eventData.isPR ? `\n- PR CRITICAL: After reading files and forming your response, you MUST post it by calling ${eventData.eventName === "pull_request_review_comment" ? "mcp__github__update_pull_request_comment" : "mcp__github__update_issue_comment"}. Do NOT just respond with a normal response, the user will not see it.` : ""}
 - You communicate exclusively by editing your single comment - not through any other means.
 - Use this spinner HTML when work is in progress: <img src="https://github.com/user-attachments/assets/5ac382c7-e004-429b-8e35-7feb3e8f9c6f" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />
@@ -658,6 +701,7 @@ export async function createPrompt(
     await writeFile("/tmp/claude-prompts/claude-prompt.txt", promptContent);
 
     // Set allowed tools
+    console.log(`🔧 [PROMPT] Building allowed tools for prepared context...`);
     const allAllowedTools = buildAllowedToolsString(
       preparedContext.eventData,
       preparedContext.allowedTools,
@@ -666,6 +710,10 @@ export async function createPrompt(
       preparedContext.disallowedTools,
     );
 
+    console.log(`🔧 [PROMPT] Setting environment variables:`);
+    console.log(`🔧 [PROMPT] ALLOWED_TOOLS: ${allAllowedTools}`);
+    console.log(`🔧 [PROMPT] DISALLOWED_TOOLS: ${allDisallowedTools}`);
+    
     core.exportVariable("ALLOWED_TOOLS", allAllowedTools);
     core.exportVariable("DISALLOWED_TOOLS", allDisallowedTools);
   } catch (error) {

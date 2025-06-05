@@ -532,21 +532,37 @@ server.tool(
     body: z.string().describe("New comment body"),
   },
   async ({ owner, repo, commentId, body }) => {
-    console.log(`🔧 [MCP] Attempting to update issue comment: ${commentId}`);
+    console.log(`========================================`);
+    console.log(`🔧 [MCP] ISSUE COMMENT UPDATE REQUEST`);
+    console.log(`========================================`);
+    console.log(`🔧 [MCP] Timestamp: ${new Date().toISOString()}`);
+    console.log(`🔧 [MCP] Function: github__update_issue_comment`);
     console.log(`🔧 [MCP] Repository: ${owner}/${repo}`);
-    console.log(`🔧 [MCP] Comment body length: ${body.length} chars`);
+    console.log(`🔧 [MCP] Comment ID: ${commentId}`);
+    console.log(`🔧 [MCP] Comment body length: ${body.length} characters`);
+    console.log(`🔧 [MCP] Comment body preview: ${body.substring(0, 100)}${body.length > 100 ? '...' : ''}`);
+    console.log(`🔧 [MCP] Process PID: ${process.pid}`);
+    console.log(`🔧 [MCP] Working directory: ${process.cwd()}`);
     
     try {
+      // Environment validation
+      console.log(`🔧 [MCP] === ENVIRONMENT VALIDATION ===`);
       const githubToken = process.env.GITHUB_TOKEN;
       if (!githubToken) {
         console.error(`❌ [MCP] GITHUB_TOKEN environment variable is missing`);
+        console.error(`❌ [MCP] Available env vars: ${Object.keys(process.env).filter(k => k.startsWith('GITHUB')).join(', ')}`);
         throw new Error("GITHUB_TOKEN environment variable is required");
       }
       
       console.log(`🔧 [MCP] GitHub token available: ${githubToken.substring(0, 8)}...`);
+      console.log(`🔧 [MCP] Token length: ${githubToken.length}`);
+      console.log(`🔧 [MCP] Token prefix: ${githubToken.startsWith('ghs_') ? 'ghs_' : githubToken.startsWith('ghp_') ? 'ghp_' : 'unknown'}`);
 
+      // API request preparation
+      console.log(`🔧 [MCP] === API REQUEST PREPARATION ===`);
       const updateUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/issues/comments/${commentId}`;
       console.log(`🔧 [MCP] API URL: ${updateUrl}`);
+      console.log(`🔧 [MCP] HTTP Method: PATCH`);
       
       const requestHeaders = {
         Accept: "application/vnd.github+json",
@@ -556,6 +572,11 @@ server.tool(
       };
       
       console.log(`🔧 [MCP] Request headers: ${JSON.stringify({...requestHeaders, Authorization: "Bearer [REDACTED]"})}`);
+      console.log(`🔧 [MCP] Request body: ${JSON.stringify({ body }, null, 2)}`);
+      
+      // API request execution
+      console.log(`🔧 [MCP] === API REQUEST EXECUTION ===`);
+      console.log(`🔧 [MCP] Making PATCH request to GitHub API...`);
       
       const response = await fetch(updateUrl, {
         method: "PATCH",
@@ -563,20 +584,39 @@ server.tool(
         body: JSON.stringify({ body }),
       });
 
+      // Response analysis
+      console.log(`🔧 [MCP] === API RESPONSE ANALYSIS ===`);
       console.log(`🔧 [MCP] Response status: ${response.status} ${response.statusText}`);
-      console.log(`🔧 [MCP] Response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
+      console.log(`🔧 [MCP] Response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}`);
+      console.log(`🔧 [MCP] Response ok: ${response.ok}`);
+      console.log(`🔧 [MCP] Response type: ${response.type}`);
+      console.log(`🔧 [MCP] Response redirected: ${response.redirected}`);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`❌ [MCP] API Error: ${response.status} - ${errorText}`);
+        console.error(`❌ [MCP] === API ERROR DETAILS ===`);
+        console.error(`❌ [MCP] Status: ${response.status} - ${response.statusText}`);
+        console.error(`❌ [MCP] Error response body: ${errorText}`);
         
         // Add specific error messages for common permission issues
         if (response.status === 401) {
           console.error(`❌ [MCP] Authentication failed - check if GITHUB_TOKEN is valid and not expired`);
+          console.error(`❌ [MCP] This usually means:`);
+          console.error(`❌ [MCP] 1. Token is invalid or malformed`);
+          console.error(`❌ [MCP] 2. Token has expired`);
+          console.error(`❌ [MCP] 3. OIDC token exchange failed`);
         } else if (response.status === 403) {
           console.error(`❌ [MCP] Permission denied - check if token has 'issues:write' or 'repo' scope`);
+          console.error(`❌ [MCP] This usually means:`);
+          console.error(`❌ [MCP] 1. Token doesn't have sufficient permissions`);
+          console.error(`❌ [MCP] 2. Repository is private and token lacks access`);
+          console.error(`❌ [MCP] 3. Rate limit exceeded`);
         } else if (response.status === 404) {
           console.error(`❌ [MCP] Comment or repository not found - verify comment ID ${commentId} exists in ${owner}/${repo}`);
+          console.error(`❌ [MCP] This usually means:`);
+          console.error(`❌ [MCP] 1. Comment ID ${commentId} doesn't exist`);
+          console.error(`❌ [MCP] 2. Repository ${owner}/${repo} doesn't exist`);
+          console.error(`❌ [MCP] 3. Comment was deleted`);
         }
         
         throw new Error(
@@ -585,7 +625,11 @@ server.tool(
       }
 
       const result = await response.json();
+      console.log(`✅ [MCP] === SUCCESS ===`);
       console.log(`✅ [MCP] Comment updated successfully: ${commentId}`);
+      console.log(`✅ [MCP] Updated comment URL: ${result.html_url || 'N/A'}`);
+      console.log(`✅ [MCP] Updated at: ${result.updated_at || 'N/A'}`);
+      console.log(`========================================`);
       
       return {
         content: [
@@ -598,7 +642,10 @@ server.tool(
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
+      console.error(`❌ [MCP] === FATAL ERROR ===`);
       console.error(`❌ [MCP] Error updating issue comment: ${errorMessage}`);
+      console.error(`❌ [MCP] Error stack: ${error instanceof Error ? error.stack : 'N/A'}`);
+      console.error(`========================================`);
       return {
         content: [
           {
@@ -710,22 +757,37 @@ server.tool(
     body: z.string().describe("New comment body"),
   },
   async ({ owner, repo, commentId, body }) => {
-    console.log(`🔧 [MCP] Attempting to update PR comment: ${commentId}`);
+    console.log(`========================================`);
+    console.log(`🔧 [MCP] PR COMMENT UPDATE REQUEST`);
+    console.log(`========================================`);
+    console.log(`🔧 [MCP] Timestamp: ${new Date().toISOString()}`);
+    console.log(`🔧 [MCP] Function: github__update_pull_request_comment`);
     console.log(`🔧 [MCP] Repository: ${owner}/${repo}`);
-    console.log(`🔧 [MCP] Comment body length: ${body.length} chars`);
+    console.log(`🔧 [MCP] Comment ID: ${commentId}`);
+    console.log(`🔧 [MCP] Comment body length: ${body.length} characters`);
+    console.log(`🔧 [MCP] Comment body preview: ${body.substring(0, 100)}${body.length > 100 ? '...' : ''}`);
     
     try {
+      // Environment validation
+      console.log(`🔧 [MCP] === ENVIRONMENT VALIDATION ===`);
       const githubToken = process.env.GITHUB_TOKEN;
       if (!githubToken) {
         console.error(`❌ [MCP] GITHUB_TOKEN environment variable is missing`);
+        console.error(`❌ [MCP] Available env vars: ${Object.keys(process.env).filter(k => k.startsWith('GITHUB')).join(', ')}`);
         throw new Error("GITHUB_TOKEN environment variable is required");
       }
       
       console.log(`🔧 [MCP] GitHub token available: ${githubToken.substring(0, 8)}...`);
+      console.log(`🔧 [MCP] Token length: ${githubToken.length}`);
+      console.log(`🔧 [MCP] Token prefix: ${githubToken.startsWith('ghs_') ? 'ghs_' : githubToken.startsWith('ghp_') ? 'ghp_' : 'unknown'}`);
 
+      // API request preparation
+      console.log(`🔧 [MCP] === API REQUEST PREPARATION ===`);
       // PR comments use the same API as issue comments
       const updateUrl = `${GITHUB_API_URL}/repos/${owner}/${repo}/issues/comments/${commentId}`;
       console.log(`🔧 [MCP] API URL: ${updateUrl}`);
+      console.log(`🔧 [MCP] HTTP Method: PATCH`);
+      console.log(`🔧 [MCP] Note: Using issues/comments API for PR comments`);
       
       const requestHeaders = {
         Accept: "application/vnd.github+json",
@@ -735,6 +797,11 @@ server.tool(
       };
       
       console.log(`🔧 [MCP] Request headers: ${JSON.stringify({...requestHeaders, Authorization: "Bearer [REDACTED]"})}`);
+      console.log(`🔧 [MCP] Request body: ${JSON.stringify({ body }, null, 2)}`);
+      
+      // API request execution
+      console.log(`🔧 [MCP] === API REQUEST EXECUTION ===`);
+      console.log(`🔧 [MCP] Making PATCH request to GitHub API...`);
       
       const response = await fetch(updateUrl, {
         method: "PATCH",
@@ -742,20 +809,37 @@ server.tool(
         body: JSON.stringify({ body }),
       });
 
+      // Response analysis
+      console.log(`🔧 [MCP] === API RESPONSE ANALYSIS ===`);
       console.log(`🔧 [MCP] Response status: ${response.status} ${response.statusText}`);
-      console.log(`🔧 [MCP] Response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()))}`);
+      console.log(`🔧 [MCP] Response headers: ${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}`);
+      console.log(`🔧 [MCP] Response ok: ${response.ok}`);
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`❌ [MCP] API Error: ${response.status} - ${errorText}`);
+        console.error(`❌ [MCP] === API ERROR DETAILS ===`);
+        console.error(`❌ [MCP] Status: ${response.status} - ${response.statusText}`);
+        console.error(`❌ [MCP] Error response body: ${errorText}`);
         
         // Add specific error messages for common permission issues
         if (response.status === 401) {
           console.error(`❌ [MCP] Authentication failed - check if GITHUB_TOKEN is valid and not expired`);
+          console.error(`❌ [MCP] This usually means:`);
+          console.error(`❌ [MCP] 1. Token is invalid or malformed`);
+          console.error(`❌ [MCP] 2. Token has expired`);
+          console.error(`❌ [MCP] 3. OIDC token exchange failed`);
         } else if (response.status === 403) {
           console.error(`❌ [MCP] Permission denied - check if token has 'issues:write' or 'repo' scope`);
+          console.error(`❌ [MCP] This usually means:`);
+          console.error(`❌ [MCP] 1. Token doesn't have sufficient permissions`);
+          console.error(`❌ [MCP] 2. Repository is private and token lacks access`);
+          console.error(`❌ [MCP] 3. Rate limit exceeded`);
         } else if (response.status === 404) {
           console.error(`❌ [MCP] Comment or repository not found - verify comment ID ${commentId} exists in ${owner}/${repo}`);
+          console.error(`❌ [MCP] This usually means:`);
+          console.error(`❌ [MCP] 1. Comment ID ${commentId} doesn't exist`);
+          console.error(`❌ [MCP] 2. Repository ${owner}/${repo} doesn't exist`);
+          console.error(`❌ [MCP] 3. Comment was deleted`);
         }
         
         throw new Error(
@@ -764,7 +848,11 @@ server.tool(
       }
 
       const result = await response.json();
+      console.log(`✅ [MCP] === SUCCESS ===`);
       console.log(`✅ [MCP] PR comment updated successfully: ${commentId}`);
+      console.log(`✅ [MCP] Updated comment URL: ${result.html_url || 'N/A'}`);
+      console.log(`✅ [MCP] Updated at: ${result.updated_at || 'N/A'}`);
+      console.log(`========================================`);
       
       return {
         content: [
@@ -777,7 +865,10 @@ server.tool(
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
+      console.error(`❌ [MCP] === FATAL ERROR ===`);
       console.error(`❌ [MCP] Error updating PR comment: ${errorMessage}`);
+      console.error(`❌ [MCP] Error stack: ${error instanceof Error ? error.stack : 'N/A'}`);
+      console.error(`========================================`);
       return {
         content: [
           {
@@ -953,7 +1044,10 @@ async function runServer() {
   await server.connect(transport);
   
   // Log environment variables for debugging permission issues
-  console.error("🚀 [MCP] GitHub File Operations Server started");
+  console.error("===========================================");
+  console.error("🚀 [MCP] GitHub File Operations Server STARTED");
+  console.error("===========================================");
+  console.error(`🔧 [MCP] Timestamp: ${new Date().toISOString()}`);
   console.error(`🔧 [MCP] REPO_OWNER: ${REPO_OWNER}`);
   console.error(`🔧 [MCP] REPO_NAME: ${REPO_NAME}`);
   console.error(`🔧 [MCP] BRANCH_NAME: ${BRANCH_NAME}`);
@@ -962,8 +1056,21 @@ async function runServer() {
   console.error(`🔧 [MCP] Working directory: ${process.cwd()}`);
   console.error(`🔧 [MCP] Node version: ${process.version}`);
   console.error(`🔧 [MCP] Platform: ${process.platform}`);
+  console.error(`🔧 [MCP] Process PID: ${process.pid}`);
+  console.error(`🔧 [MCP] Available tools:`);
+  console.error(`🔧 [MCP] - commit_files`);
+  console.error(`🔧 [MCP] - delete_files`);
+  console.error(`🔧 [MCP] - create_issue`);
+  console.error(`🔧 [MCP] - github__update_issue_comment`);
+  console.error(`🔧 [MCP] - create_pull_request`);
+  console.error(`🔧 [MCP] - github__update_pull_request_comment`);
+  console.error(`🔧 [MCP] - update_pull_request_review_comment`);
+  console.error(`🔧 [MCP] - list_issues`);
+  console.error(`🔧 [MCP] MCP Server ready to receive tool calls`);
+  console.error("===========================================");
   
   process.on("exit", () => {
+    console.error(`🛑 [MCP] Server shutting down at ${new Date().toISOString()}`);
     server.close();
   });
 }
