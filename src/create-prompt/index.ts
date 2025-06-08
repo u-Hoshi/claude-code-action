@@ -478,9 +478,9 @@ All four parameters (owner, repo, commentId, body) are required.
     } else if (eventData.eventName === "issue_comment" && eventData.isPR) {
       console.log(`🔧 [PROMPT] Using PR comment tool for issue_comment on PR`);
       return `<comment_tool_info>
-IMPORTANT: For this PR comment, you have been provided with ONLY the mcp__github_file_ops__github__update_pull_request_comment tool to update comments.
+IMPORTANT: For this PR comment, you have been provided with ONLY the mcp__github_file_ops__github__update_issue_comment tool to update comments.
 
-Tool usage example for mcp__github_file_ops__github__update_pull_request_comment:
+Tool usage example for mcp__github_file_ops__github__update_issue_comment:
 {
   "owner": "${owner}",
   "repo": "${repo}",
@@ -519,7 +519,7 @@ Follow these steps:
 1. Create a Todo List:
    - Use your GitHub comment to maintain a detailed task list based on the request.
    - Format todos as a checklist (- [ ] for incomplete, - [x] for complete).
-   - Update the comment using ${eventData.eventName === "pull_request_review_comment" ? "mcp__github_file_ops__update_pull_request_review_comment" : (eventData.eventName === "issue_comment" && eventData.isPR) ? "mcp__github_file_ops__update_pull_request_comment" : "mcp__github_file_ops__update_issue_comment"} with each task completion.
+   - Update the comment using ${eventData.eventName === "pull_request_review_comment" ? "mcp__github_file_ops__update_pull_request_review_comment" : "mcp__github_file_ops__github__update_issue_comment"} with each task completion.
 
 2. Gather Context:
    - Analyze the pre-fetched data provided above.
