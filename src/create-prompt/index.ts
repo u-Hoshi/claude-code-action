@@ -549,7 +549,7 @@ ${context.directPrompt ? `   - DIRECT INSTRUCTION: A direct instruction was prov
         - Look for bugs, security issues, performance problems, and other issues
         - Suggest improvements for readability and maintainability
         - Check for best practices and coding standards
-        - Reference specific code sections with file paths and line numbers${eventData.isPR ? `\n      - AFTER reading files and analyzing code, you MUST call ${eventData.eventName === "pull_request_review_comment" ? "mcp__github_file_ops__github__update_pull_request_comment" : "mcp__github_file_ops__github__update_issue_comment"} to post your review` : ""}
+        - Reference specific code sections with file paths and line numbers${eventData.isPR ? `\n      - AFTER reading files and analyzing code, you MUST call ${eventData.eventName === "pull_request_review_comment" ? "mcp__github_file_ops__update_pull_request_review_comment" : "mcp__github_file_ops__github__update_issue_comment"} to post your review` : ""}
       - Formulate a concise, technical, and helpful response based on the context.
       - Reference specific code with inline formatting or code blocks.
       - Include relevant file paths and line numbers when applicable.
@@ -612,14 +612,12 @@ Important Notes:
   (() => {
     const toolName = eventData.eventName === "pull_request_review_comment" 
       ? "mcp__github_file_ops__update_pull_request_review_comment"
-      : (eventData.eventName === "issue_comment" && eventData.isPR)
-      ? "mcp__github_file_ops__github__update_pull_request_comment"
       : "mcp__github_file_ops__github__update_issue_comment";
     console.log(`🔧 [PROMPT] Final tool instruction - using tool: ${toolName} for event: ${eventData.eventName}, isPR: ${eventData.isPR}`);
     return toolName;
   })()
 } with comment_id: ${context.claudeCommentId}.
-- This includes ALL responses: code reviews, answers to questions, progress updates, and final results.${eventData.isPR ? `\n- PR CRITICAL: After reading files and forming your response, you MUST post it by calling ${eventData.eventName === "pull_request_review_comment" ? "mcp__github_file_ops__github__update_pull_request_comment" : "mcp__github_file_ops__github__update_issue_comment"}. Do NOT just respond with a normal response, the user will not see it.` : ""}
+- This includes ALL responses: code reviews, answers to questions, progress updates, and final results.${eventData.isPR ? `\n- PR CRITICAL: After reading files and forming your response, you MUST post it by calling ${eventData.eventName === "pull_request_review_comment" ? "mcp__github_file_ops__update_pull_request_review_comment" : "mcp__github_file_ops__github__update_issue_comment"}. Do NOT just respond with a normal response, the user will not see it.` : ""}
 - You communicate exclusively by editing your single comment - not through any other means.
 - Use this spinner HTML when work is in progress: <img src="https://github.com/user-attachments/assets/5ac382c7-e004-429b-8e35-7feb3e8f9c6f" width="14px" height="14px" style="vertical-align: middle; margin-left: 4px;" />
 ${eventData.isPR && !eventData.claudeBranch ? `- Always push to the existing branch when triggered on a PR.` : `- IMPORTANT: You are already on the correct branch (${eventData.claudeBranch || "the created branch"}). Never create new branches when triggered on issues or closed/merged PRs.`}
